@@ -14,15 +14,42 @@ void main() async {
 }
 
 class AppUser {
+  String? id;
   String name;
   String email;
-  String password;
 
   AppUser({
+    this.id,
     required this.name,
     required this.email,
-    required this.password,
   });
+
+  AppUser copyWith({
+    String? id,
+    String? name,
+    String? email,
+  }) {
+    return AppUser(
+      id: id ?? this.id,
+      name: name ?? this.name,
+      email: email ?? this.email,
+    );
+  }
+
+  AppUser fromJson(Map<String, dynamic> json) {
+    return AppUser(
+      id: json['uid'],
+      name: json['name'],
+      email: json['email'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'name': name,
+      'email': email,
+    };
+  }
 }
 
 class MyApp extends StatelessWidget {
@@ -34,21 +61,6 @@ class MyApp extends StatelessWidget {
       title: 'Flutter Demo',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
@@ -71,9 +83,11 @@ class MyLoginPage extends StatefulWidget {
 class _MyLoginPageState extends State<MyLoginPage> {
   @override
   Widget build(BuildContext context) {
+    final screenH = MediaQuery.of(context).size.height;
+    print("screenH : $screenH");
     return Scaffold(
         body: Padding(
-      padding: const EdgeInsets.only(top: 200),
+      padding: EdgeInsets.only(top: screenH / 4),
       child: Center(
         child: SizedBox(
           width: 500,
@@ -121,8 +135,7 @@ class _MyLoginPageState extends State<MyLoginPage> {
 }
 
 class SignupPage extends StatefulWidget {
-  final String pattern =
-      r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$';
+  final String pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$';
 
   const SignupPage({super.key});
 
@@ -131,27 +144,37 @@ class SignupPage extends StatefulWidget {
 }
 
 class _MySignupPageState extends State<SignupPage> {
-  TextEditingController name = TextEditingController();
-  TextEditingController email = TextEditingController();
-  TextEditingController password = TextEditingController();
-  TextEditingController confirmedPassword = TextEditingController();
+
+  List<String> fieldNames = ['name', 'email', 'password', 'confirmedPassword'];
+
+  late Map<String, TextEditingController> controllers;
 
   late RegExp regex = RegExp(widget.pattern);
+
+  @override
+  void initState() {
+    super.initState();
+    fieldNames.forEach((field) {
+      // ici !!!
+    });
+  }
+
+  @override
+  void dispose() {
+    // TODO: implement dispose
+    super.dispose();
+  }
+
   void signup() {
 
-    if (kDebugMode) {
-      print(name.text);
-      print(email.text);
-      print(password.text);
-      print(confirmedPassword.text);
-    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final screenH = MediaQuery.of(context).size.height;
     return Scaffold(
         body: Padding(
-      padding: const EdgeInsets.only(top: 200),
+      padding: EdgeInsets.only(top: screenH / 8),
       child: Center(
         child: SizedBox(
           width: 500,
@@ -160,6 +183,7 @@ class _MySignupPageState extends State<SignupPage> {
               TextField(
                 controller: name,
                 decoration: InputDecoration(
+                  hintText: 'Entrer votre nom',
                   labelText: "Name",
                   filled: true,
                   fillColor: Colors.grey[100],
@@ -170,14 +194,11 @@ class _MySignupPageState extends State<SignupPage> {
               ),
               TextField(
                 onChanged: (text) {
-
-                  if(!regex.hasMatch(email.text)) {
-
-                  }
+                  if (!regex.hasMatch(email.text)) {}
                 },
                 controller: email,
-
                 decoration: InputDecoration(
+                  hintText: 'Entrer un email',
                   labelText: "Email",
                   filled: true,
                   fillColor: Colors.grey[100],
@@ -189,6 +210,7 @@ class _MySignupPageState extends State<SignupPage> {
               TextField(
                 controller: password,
                 decoration: InputDecoration(
+                  hintText: 'Entrer un mot de passe',
                   labelText: "Password",
                   filled: true,
                   fillColor: Colors.grey[100],
@@ -200,6 +222,7 @@ class _MySignupPageState extends State<SignupPage> {
               TextField(
                 controller: confirmedPassword,
                 decoration: InputDecoration(
+                  hintText: 'Veuillez confirmer le mot de passe',
                   labelText: "Confirm Password",
                   filled: true,
                   fillColor: Colors.grey[100],
