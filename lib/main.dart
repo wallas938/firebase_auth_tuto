@@ -52,6 +52,21 @@ class AppUser {
   }
 }
 
+class FieldData {
+  TextEditingController textEditingController;
+  FocusNode focusNode;
+  bool isFocused;
+  bool errorState;
+  String? errorMessage;
+
+  FieldData(
+      {required this.textEditingController,
+      required this.focusNode,
+      required this.isFocused,
+      required this.errorMessage,
+      required this.errorState});
+}
+
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
@@ -144,19 +159,93 @@ class SignupPage extends StatefulWidget {
 }
 
 class _MySignupPageState extends State<SignupPage> {
-
   List<String> fieldNames = ['name', 'email', 'password', 'confirmedPassword'];
 
-  late Map<String, TextEditingController> controllers;
-
+  final Map<String, FieldData> fieldsData = {};
+  late Map<String, String?> errors = {};
+  late String tempPassword = '';
   late RegExp regex = RegExp(widget.pattern);
 
   @override
   void initState() {
     super.initState();
-    fieldNames.forEach((field) {
-      // ici !!!
+    initFieldsData(fieldNames);
+  }
+
+  void initFieldsData(List<String> fields) {
+    for (var name in fields) {
+      fieldsData.addAll({
+        name: FieldData(
+            textEditingController: TextEditingController(),
+            focusNode: FocusNode(),
+            isFocused: false,
+            errorMessage: null,
+            errorState: false)
+      });
+      fieldsData[name]?.focusNode.addListener(() {
+        setState(() {
+          fieldsData[name]?.isFocused = fieldsData[name]!.focusNode.hasFocus;
+          if (kDebugMode) {
+            print(fieldsData[name]?.isFocused);
+          }
+        });
+      });
+    }
+  }
+
+  void validateFieldValues(String field, String value) {
+    setState(() {
+      switch (field) {
+        case 'name':
+          {
+            if (value.isEmpty) {
+              fieldsData[field]?.errorMessage = 'Name cannot be empty.';
+              fieldsData[field]?.errorState = true;
+            } else {
+              fieldsData[field]?.errorMessage = null;
+              fieldsData[field]?.errorState = false;
+            }
+          }
+        case 'email':
+          {
+            if (value.isEmpty || !regex.hasMatch(value)) {
+              fieldsData[field]?.errorMessage =
+                  'Entered email is not correctly formated.';
+              fieldsData[field]?.errorState = true;
+            } else {
+              fieldsData[field]?.errorMessage = null;
+              fieldsData[field]?.errorState = false;
+            }
+          }
+        case 'password':
+          {
+            if (value.length < 6) {
+              fieldsData[field]?.errorMessage =
+                  'Your password must be at least six characters long.';
+              fieldsData[field]?.errorState = true;
+            } else {
+              fieldsData[field]?.errorMessage = null;
+              fieldsData[field]?.errorState = false;
+            }
+          }
+        case 'confirmedPassword':
+          {
+            if (tempPassword.isNotEmpty && value != tempPassword ||
+                tempPassword.isEmpty) {
+              fieldsData[field]?.errorMessage = 'Both passwords do not match.';
+              fieldsData[field]?.errorState = true;
+              errors[field] = 'Both passwords do not match';
+            } else {
+              fieldsData[field]?.errorMessage = null;
+              fieldsData[field]?.errorState = false;
+            }
+          }
+      }
     });
+  }
+
+  bool isAllFieldsIsValid() {
+    return true;
   }
 
   @override
@@ -166,7 +255,8 @@ class _MySignupPageState extends State<SignupPage> {
   }
 
   void signup() {
-
+    if (kDebugMode) {
+    }
   }
 
   @override
@@ -181,57 +271,85 @@ class _MySignupPageState extends State<SignupPage> {
           child: Column(
             children: [
               TextField(
-                controller: name,
+                onChanged: (text) {
+                  validateFieldValues('name', text);
+                },
+                controller: fieldsData['name']?.textEditingController,
                 decoration: InputDecoration(
-                  hintText: 'Entrer votre nom',
-                  labelText: "Name",
-                  filled: true,
-                  fillColor: Colors.grey[100],
-                ),
+                    hintText: 'Enter your name',
+                    labelText: "Name",
+                    filled: true,
+                    fillColor: Colors.grey[100],
+                    errorText: fieldsData['name']?.errorMessage),
               ),
               const SizedBox(
                 height: 40,
               ),
               TextField(
                 onChanged: (text) {
-                  if (!regex.hasMatch(email.text)) {}
+                  if (!fieldsData['email']!.isFocused) {
+                    validateFieldValues('email', text);
+                  }
                 },
-                controller: email,
+                focusNode: fieldsData['email']?.focusNode,
+                controller: fieldsData['email']?.textEditingController,
                 decoration: InputDecoration(
-                  hintText: 'Entrer un email',
-                  labelText: "Email",
-                  filled: true,
-                  fillColor: Colors.grey[100],
-                ),
+                    hintText: 'Enter an email',
+                    labelText: "Email",
+                    filled: true,
+                    fillColor: Colors.grey[100],
+                    errorText: fieldsData['email']?.errorMessage), // Conditionner l'affichage du message avec errorState
               ),
               const SizedBox(
                 height: 40,
               ),
               TextField(
-                controller: password,
+                onChanged: (text) {
+                  tempPassword = text;
+                  validateFieldValues('password', text);
+                },
+                controller: fieldsData['password']?.textEditingController,
                 decoration: InputDecoration(
-                  hintText: 'Entrer un mot de passe',
-                  labelText: "Password",
-                  filled: true,
-                  fillColor: Colors.grey[100],
-                ),
+                    hintText: 'Enter your password',
+                    labelText: "Password",
+                    filled: true,
+                    fillColor: Colors.grey[100],
+                    errorText: fieldsData['password']?.errorMessage),
               ),
               const SizedBox(
                 height: 40,
               ),
               TextField(
-                controller: confirmedPassword,
+                onChanged: (text) {
+                  validateFieldValues('confirmedPassword', text);
+                },
+                controller:
+                    fieldsData['confirmedPassword']?.textEditingController,
                 decoration: InputDecoration(
-                  hintText: 'Veuillez confirmer le mot de passe',
-                  labelText: "Confirm Password",
-                  filled: true,
-                  fillColor: Colors.grey[100],
-                ),
+                    hintText: 'Repeat your password',
+                    labelText: "Confirm Password",
+                    filled: true,
+                    fillColor: Colors.grey[100],
+                    errorText: fieldsData['confirmedPassword']?.errorMessage),
               ),
               const SizedBox(
                 height: 40,
               ),
-              TextButton(onPressed: signup, child: const Text("Submit")),
+              TextButton(
+                onPressed: true ? signup : null,
+                style: ButtonStyle(
+                  foregroundColor: WidgetStateProperty.resolveWith<Color>(
+                    (Set<WidgetState> states) {
+                      if (states.contains(WidgetState.disabled)) {
+                        return Colors.grey;
+                      }
+                      return Colors.blue;
+                    },
+                  ),
+                  overlayColor: WidgetStateProperty.all(Colors.transparent),
+                ),
+                child: const Text("Submit"),
+              ),
               const SizedBox(
                 height: 40,
               ),
