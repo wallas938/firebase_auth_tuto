@@ -56,7 +56,7 @@ class FieldData {
   TextEditingController textEditingController;
   FocusNode focusNode;
   bool isFocused;
-  bool errorState;
+  bool hasError;
   String? errorMessage;
 
   FieldData(
@@ -64,7 +64,7 @@ class FieldData {
       required this.focusNode,
       required this.isFocused,
       required this.errorMessage,
-      required this.errorState});
+      required this.hasError});
 }
 
 class MyApp extends StatelessWidget {
@@ -99,7 +99,6 @@ class _MyLoginPageState extends State<MyLoginPage> {
   @override
   Widget build(BuildContext context) {
     final screenH = MediaQuery.of(context).size.height;
-    print("screenH : $screenH");
     return Scaffold(
         body: Padding(
       padding: EdgeInsets.only(top: screenH / 4),
@@ -180,14 +179,11 @@ class _MySignupPageState extends State<SignupPage> {
             focusNode: FocusNode(),
             isFocused: false,
             errorMessage: null,
-            errorState: false)
+            hasError: false)
       });
       fieldsData[name]?.focusNode.addListener(() {
         setState(() {
           fieldsData[name]?.isFocused = fieldsData[name]!.focusNode.hasFocus;
-          if (kDebugMode) {
-            print(fieldsData[name]?.isFocused);
-          }
         });
       });
     }
@@ -200,10 +196,10 @@ class _MySignupPageState extends State<SignupPage> {
           {
             if (value.isEmpty) {
               fieldsData[field]?.errorMessage = 'Name cannot be empty.';
-              fieldsData[field]?.errorState = true;
+              fieldsData[field]?.hasError = true;
             } else {
               fieldsData[field]?.errorMessage = null;
-              fieldsData[field]?.errorState = false;
+              fieldsData[field]?.hasError = false;
             }
           }
         case 'email':
@@ -211,10 +207,10 @@ class _MySignupPageState extends State<SignupPage> {
             if (value.isEmpty || !regex.hasMatch(value)) {
               fieldsData[field]?.errorMessage =
                   'Entered email is not correctly formated.';
-              fieldsData[field]?.errorState = true;
+              fieldsData[field]?.hasError = true;
             } else {
               fieldsData[field]?.errorMessage = null;
-              fieldsData[field]?.errorState = false;
+              fieldsData[field]?.hasError = false;
             }
           }
         case 'password':
@@ -222,10 +218,10 @@ class _MySignupPageState extends State<SignupPage> {
             if (value.length < 6) {
               fieldsData[field]?.errorMessage =
                   'Your password must be at least six characters long.';
-              fieldsData[field]?.errorState = true;
+              fieldsData[field]?.hasError = true;
             } else {
               fieldsData[field]?.errorMessage = null;
-              fieldsData[field]?.errorState = false;
+              fieldsData[field]?.hasError = false;
             }
           }
         case 'confirmedPassword':
@@ -233,11 +229,11 @@ class _MySignupPageState extends State<SignupPage> {
             if (tempPassword.isNotEmpty && value != tempPassword ||
                 tempPassword.isEmpty) {
               fieldsData[field]?.errorMessage = 'Both passwords do not match.';
-              fieldsData[field]?.errorState = true;
+              fieldsData[field]?.hasError = true;
               errors[field] = 'Both passwords do not match';
             } else {
               fieldsData[field]?.errorMessage = null;
-              fieldsData[field]?.errorState = false;
+              fieldsData[field]?.hasError = false;
             }
           }
       }
@@ -255,8 +251,7 @@ class _MySignupPageState extends State<SignupPage> {
   }
 
   void signup() {
-    if (kDebugMode) {
-    }
+    if (kDebugMode) {}
   }
 
   @override
@@ -265,104 +260,118 @@ class _MySignupPageState extends State<SignupPage> {
     return Scaffold(
         body: Padding(
       padding: EdgeInsets.only(top: screenH / 8),
-      child: Center(
-        child: SizedBox(
-          width: 500,
-          child: Column(
-            children: [
-              TextField(
-                onChanged: (text) {
-                  validateFieldValues('name', text);
-                },
-                controller: fieldsData['name']?.textEditingController,
-                decoration: InputDecoration(
-                    hintText: 'Enter your name',
-                    labelText: "Name",
-                    filled: true,
-                    fillColor: Colors.grey[100],
-                    errorText: fieldsData['name']?.errorMessage),
-              ),
-              const SizedBox(
-                height: 40,
-              ),
-              TextField(
-                onChanged: (text) {
-                  if (!fieldsData['email']!.isFocused) {
-                    validateFieldValues('email', text);
-                  }
-                },
-                focusNode: fieldsData['email']?.focusNode,
-                controller: fieldsData['email']?.textEditingController,
-                decoration: InputDecoration(
-                    hintText: 'Enter an email',
-                    labelText: "Email",
-                    filled: true,
-                    fillColor: Colors.grey[100],
-                    errorText: fieldsData['email']?.errorMessage), // Conditionner l'affichage du message avec errorState
-              ),
-              const SizedBox(
-                height: 40,
-              ),
-              TextField(
-                onChanged: (text) {
-                  tempPassword = text;
-                  validateFieldValues('password', text);
-                },
-                controller: fieldsData['password']?.textEditingController,
-                decoration: InputDecoration(
-                    hintText: 'Enter your password',
-                    labelText: "Password",
-                    filled: true,
-                    fillColor: Colors.grey[100],
-                    errorText: fieldsData['password']?.errorMessage),
-              ),
-              const SizedBox(
-                height: 40,
-              ),
-              TextField(
-                onChanged: (text) {
-                  validateFieldValues('confirmedPassword', text);
-                },
-                controller:
-                    fieldsData['confirmedPassword']?.textEditingController,
-                decoration: InputDecoration(
-                    hintText: 'Repeat your password',
-                    labelText: "Confirm Password",
-                    filled: true,
-                    fillColor: Colors.grey[100],
-                    errorText: fieldsData['confirmedPassword']?.errorMessage),
-              ),
-              const SizedBox(
-                height: 40,
-              ),
-              TextButton(
-                onPressed: true ? signup : null,
-                style: ButtonStyle(
-                  foregroundColor: WidgetStateProperty.resolveWith<Color>(
-                    (Set<WidgetState> states) {
-                      if (states.contains(WidgetState.disabled)) {
-                        return Colors.grey;
-                      }
-                      return Colors.blue;
-                    },
-                  ),
-                  overlayColor: WidgetStateProperty.all(Colors.transparent),
-                ),
-                child: const Text("Submit"),
-              ),
-              const SizedBox(
-                height: 40,
-              ),
-              GestureDetector(
-                  onTap: () {
-                    Navigator.of(context).push(
-                      MaterialPageRoute(
-                        builder: (context) => const MyLoginPage(),
-                      ),
-                    );
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+        child: Center(
+          child: SizedBox(
+            width: 500,
+            child: Column(
+              children: [
+                TextField(
+                  onChanged: (text) {
+                    validateFieldValues('name', text);
                   },
-                  child: const Text("Already have an account?")),
-            ],
+                  controller: fieldsData['name']?.textEditingController,
+                  decoration: InputDecoration(
+                      hintText: 'Enter your name',
+                      labelText: "Name",
+                      filled: true,
+                      fillColor: Colors.grey[100],
+                      errorText: !fieldsData['name']!.isFocused &&
+                              fieldsData['name']!.hasError
+                          ? fieldsData['name']?.errorMessage
+                          : null),
+                ),
+                const SizedBox(
+                  height: 40,
+                ),
+                TextField(
+                  onChanged: (text) {
+                    validateFieldValues('email', text);
+                  },
+                  focusNode: fieldsData['email']?.focusNode,
+                  controller: fieldsData['email']?.textEditingController,
+                  decoration: InputDecoration(
+                      hintText: 'Enter an email',
+                      labelText: "Email",
+                      filled: true,
+                      fillColor: Colors.grey[100],
+                      errorText: !fieldsData['email']!.isFocused &&
+                              fieldsData['email']!.hasError
+                          ? fieldsData['email']?.errorMessage
+                          : null),
+                ),
+                const SizedBox(
+                  height: 40,
+                ),
+                TextField(
+                  onChanged: (text) {
+                    tempPassword = text;
+                    validateFieldValues('password', text);
+                  },
+                  focusNode: fieldsData['password']?.focusNode,
+                  controller: fieldsData['password']?.textEditingController,
+                  decoration: InputDecoration(
+                      hintText: 'Enter your password',
+                      labelText: "Password",
+                      filled: true,
+                      fillColor: Colors.grey[100],
+                      errorText: !fieldsData['password']!.isFocused &&
+                              fieldsData['password']!.hasError
+                          ? fieldsData['password']?.errorMessage
+                          : null),
+                ),
+                const SizedBox(
+                  height: 40,
+                ),
+                TextField(
+                  onChanged: (text) {
+                    validateFieldValues('confirmedPassword', text);
+                  },
+                  controller:
+                      fieldsData['confirmedPassword']?.textEditingController,
+                  decoration: InputDecoration(
+                      hintText: 'Repeat your password',
+                      labelText: "Confirm Password",
+                      filled: true,
+                      fillColor: Colors.grey[100],
+                      errorText: !fieldsData['confirmedPassword']!.isFocused &&
+                              fieldsData['confirmedPassword']!.hasError
+                          ? fieldsData['confirmedPassword']?.errorMessage
+                          : null),
+                ),
+                const SizedBox(
+                  height: 40,
+                ),
+                TextButton(
+                  onPressed: true ? signup : null,
+                  style: ButtonStyle(
+                    foregroundColor: WidgetStateProperty.resolveWith<Color>(
+                      (Set<WidgetState> states) {
+                        if (states.contains(WidgetState.disabled)) {
+                          return Colors.grey;
+                        }
+                        return Colors.blue;
+                      },
+                    ),
+                    overlayColor: WidgetStateProperty.all(Colors.transparent),
+                  ),
+                  child: const Text("Submit"),
+                ),
+                const SizedBox(
+                  height: 40,
+                ),
+                GestureDetector(
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (context) => const MyLoginPage(),
+                        ),
+                      );
+                    },
+                    child: const Text("Already have an account?")),
+              ],
+            ),
           ),
         ),
       ),
