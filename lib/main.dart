@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_auth_tuto/firebase_options.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
@@ -52,11 +53,13 @@ class AppUser {
   }
 }
 
+enum FieldErrorState { initial, invalid, valid }
+
 class FieldData {
   TextEditingController textEditingController;
   FocusNode focusNode;
   bool isFocused;
-  bool hasError;
+  FieldErrorState hasError;
   String? errorMessage;
 
   FieldData(
@@ -161,8 +164,9 @@ class _MySignupPageState extends State<SignupPage> {
   List<String> fieldNames = ['name', 'email', 'password', 'confirmedPassword'];
 
   final Map<String, FieldData> fieldsData = {};
-  late Map<String, String?> errors = {};
-  late String tempPassword = '';
+  final Map<String, String?> errors = {};
+  String tempPassword = '';
+  bool formState = false;
   late RegExp regex = RegExp(widget.pattern);
 
   @override
@@ -179,7 +183,7 @@ class _MySignupPageState extends State<SignupPage> {
             focusNode: FocusNode(),
             isFocused: false,
             errorMessage: null,
-            hasError: false)
+            hasError: FieldErrorState.initial)
       });
       fieldsData[name]?.focusNode.addListener(() {
         setState(() {
@@ -196,10 +200,10 @@ class _MySignupPageState extends State<SignupPage> {
           {
             if (value.isEmpty) {
               fieldsData[field]?.errorMessage = 'Name cannot be empty.';
-              fieldsData[field]?.hasError = true;
+              fieldsData[field]?.hasError = FieldErrorState.invalid;
             } else {
               fieldsData[field]?.errorMessage = null;
-              fieldsData[field]?.hasError = false;
+              fieldsData[field]?.hasError = FieldErrorState.valid;
             }
           }
         case 'email':
@@ -207,10 +211,10 @@ class _MySignupPageState extends State<SignupPage> {
             if (value.isEmpty || !regex.hasMatch(value)) {
               fieldsData[field]?.errorMessage =
                   'Entered email is not correctly formated.';
-              fieldsData[field]?.hasError = true;
+              fieldsData[field]?.hasError = FieldErrorState.invalid;
             } else {
               fieldsData[field]?.errorMessage = null;
-              fieldsData[field]?.hasError = false;
+              fieldsData[field]?.hasError = FieldErrorState.valid;
             }
           }
         case 'password':
@@ -218,10 +222,10 @@ class _MySignupPageState extends State<SignupPage> {
             if (value.length < 6) {
               fieldsData[field]?.errorMessage =
                   'Your password must be at least six characters long.';
-              fieldsData[field]?.hasError = true;
+              fieldsData[field]?.hasError = FieldErrorState.invalid;
             } else {
               fieldsData[field]?.errorMessage = null;
-              fieldsData[field]?.hasError = false;
+              fieldsData[field]?.hasError = FieldErrorState.valid;
             }
           }
         case 'confirmedPassword':
@@ -229,19 +233,30 @@ class _MySignupPageState extends State<SignupPage> {
             if (tempPassword.isNotEmpty && value != tempPassword ||
                 tempPassword.isEmpty) {
               fieldsData[field]?.errorMessage = 'Both passwords do not match.';
-              fieldsData[field]?.hasError = true;
+              fieldsData[field]?.hasError = FieldErrorState.invalid;
               errors[field] = 'Both passwords do not match';
             } else {
               fieldsData[field]?.errorMessage = null;
-              fieldsData[field]?.hasError = false;
+              fieldsData[field]?.hasError = FieldErrorState.valid;
             }
           }
       }
+      isAllFieldsIsValid();
     });
   }
 
   bool isAllFieldsIsValid() {
-    return true;
+    bool isValid = fieldNames
+        .every((name) => fieldsData[name]!.hasError == FieldErrorState.valid);
+    setState(() {
+      if (isValid) {
+        formState = true;
+        return;
+      }
+      formState = false;
+    });
+
+    return formState;
   }
 
   @override
@@ -250,8 +265,12 @@ class _MySignupPageState extends State<SignupPage> {
     super.dispose();
   }
 
-  void signup() {
-    if (kDebugMode) {}
+  void signup() { // TEST LA REQUETE POUR LE SIGNUP
+    FirebaseAuth firebase = FirebaseAuth.instance;
+    firebase.createUserWithEmailAndPassword(
+      email: fieldsData['email']!.textEditingController.text,
+      password: fieldsData['password']!.textEditingController.text,
+    );
   }
 
   @override
@@ -278,7 +297,8 @@ class _MySignupPageState extends State<SignupPage> {
                       filled: true,
                       fillColor: Colors.grey[100],
                       errorText: !fieldsData['name']!.isFocused &&
-                              fieldsData['name']!.hasError
+                              fieldsData['name']!.hasError ==
+                                  FieldErrorState.invalid
                           ? fieldsData['name']?.errorMessage
                           : null),
                 ),
@@ -297,7 +317,8 @@ class _MySignupPageState extends State<SignupPage> {
                       filled: true,
                       fillColor: Colors.grey[100],
                       errorText: !fieldsData['email']!.isFocused &&
-                              fieldsData['email']!.hasError
+                              fieldsData['email']!.hasError ==
+                                  FieldErrorState.invalid
                           ? fieldsData['email']?.errorMessage
                           : null),
                 ),
@@ -317,7 +338,8 @@ class _MySignupPageState extends State<SignupPage> {
                       filled: true,
                       fillColor: Colors.grey[100],
                       errorText: !fieldsData['password']!.isFocused &&
-                              fieldsData['password']!.hasError
+                              fieldsData['password']!.hasError ==
+                                  FieldErrorState.invalid
                           ? fieldsData['password']?.errorMessage
                           : null),
                 ),
@@ -336,7 +358,8 @@ class _MySignupPageState extends State<SignupPage> {
                       filled: true,
                       fillColor: Colors.grey[100],
                       errorText: !fieldsData['confirmedPassword']!.isFocused &&
-                              fieldsData['confirmedPassword']!.hasError
+                              fieldsData['confirmedPassword']!.hasError ==
+                                  FieldErrorState.invalid
                           ? fieldsData['confirmedPassword']?.errorMessage
                           : null),
                 ),
@@ -344,7 +367,7 @@ class _MySignupPageState extends State<SignupPage> {
                   height: 40,
                 ),
                 TextButton(
-                  onPressed: true ? signup : null,
+                  onPressed: isAllFieldsIsValid() ? signup : null,
                   style: ButtonStyle(
                     foregroundColor: WidgetStateProperty.resolveWith<Color>(
                       (Set<WidgetState> states) {
