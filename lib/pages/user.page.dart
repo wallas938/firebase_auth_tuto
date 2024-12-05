@@ -12,7 +12,8 @@ class UserPage extends StatelessWidget {
       body: Center(child: Column(
         children: [
           Text(user.name),
-          Text(user.email)
+          Text(user.email),
+          Text(user.uid),
         ],
       )),
     );

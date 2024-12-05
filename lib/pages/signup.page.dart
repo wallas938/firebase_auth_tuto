@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_auth_tuto/main.dart';
 import 'package:firebase_auth_tuto/pages/login.page.dart';
 import 'package:firebase_auth_tuto/pages/user.page.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 enum FieldErrorState { initial, invalid, valid }
@@ -11,6 +12,7 @@ class FieldData {
   TextEditingController textEditingController;
   FocusNode focusNode;
   bool isFocused;
+  bool isDirty;
   FieldErrorState hasError;
   String? errorMessage;
 
@@ -18,6 +20,7 @@ class FieldData {
       {required this.textEditingController,
       required this.focusNode,
       required this.isFocused,
+      required this.isDirty,
       required this.errorMessage,
       required this.hasError});
 }
@@ -36,6 +39,7 @@ class _MySignupPageState extends State<SignupPage> {
 
   final Map<String, FieldData> fieldsData = {};
   final Map<String, String?> errors = {};
+  String serverError = '';
   String tempPassword = '';
   bool formState = false;
   late RegExp regex = RegExp(widget.pattern);
@@ -53,6 +57,7 @@ class _MySignupPageState extends State<SignupPage> {
             textEditingController: TextEditingController(),
             focusNode: FocusNode(),
             isFocused: false,
+            isDirty: false,
             errorMessage: null,
             hasError: FieldErrorState.initial)
       });
@@ -64,11 +69,14 @@ class _MySignupPageState extends State<SignupPage> {
     }
   }
 
-  void validateFieldValues(String field, String value) {
+  void validateField(String field, String value) {
     setState(() {
       switch (field) {
         case 'name':
           {
+            if (!fieldsData[field]!.isDirty) {
+              fieldsData[field]!.isDirty = true;
+            }
             if (value.isEmpty) {
               fieldsData[field]?.errorMessage = 'Name cannot be empty.';
               fieldsData[field]?.hasError = FieldErrorState.invalid;
@@ -79,6 +87,10 @@ class _MySignupPageState extends State<SignupPage> {
           }
         case 'email':
           {
+            if (!fieldsData[field]!.isDirty) {
+              fieldsData[field]!.isDirty = true;
+            }
+
             if (value.isEmpty || !regex.hasMatch(value)) {
               fieldsData[field]?.errorMessage =
                   'Entered email is not correctly formated.';
@@ -90,6 +102,10 @@ class _MySignupPageState extends State<SignupPage> {
           }
         case 'password':
           {
+            if (!fieldsData[field]!.isDirty) {
+              fieldsData[field]!.isDirty = true;
+            }
+
             if (value.length < 6) {
               fieldsData[field]?.errorMessage =
                   'Your password must be at least six characters long.';
@@ -101,6 +117,10 @@ class _MySignupPageState extends State<SignupPage> {
           }
         case 'confirmedPassword':
           {
+            if (!fieldsData[field]!.isDirty) {
+              fieldsData[field]!.isDirty = true;
+            }
+
             if (tempPassword.isNotEmpty && value != tempPassword ||
                 tempPassword.isEmpty) {
               fieldsData[field]?.errorMessage = 'Both passwords do not match.';
@@ -112,13 +132,12 @@ class _MySignupPageState extends State<SignupPage> {
             }
           }
       }
-      isAllFieldsIsValid();
     });
   }
 
-  bool isAllFieldsIsValid() {
-    bool isValid = fieldNames
-        .every((name) => fieldsData[name]!.hasError == FieldErrorState.valid);
+  bool isAllFieldsAreValid() {
+    bool isValid = fieldNames.every((fieldName) =>
+        fieldsData[fieldName]!.hasError == FieldErrorState.valid);
     setState(() {
       if (isValid) {
         formState = true;
@@ -132,8 +151,14 @@ class _MySignupPageState extends State<SignupPage> {
 
   @override
   void dispose() {
-    // TODO: implement dispose
+    disposeControllers();
     super.dispose();
+  }
+
+  void disposeControllers() {
+    fieldsData.forEach((fieldName, fieldData) {
+      fieldsData[fieldName]?.textEditingController.dispose();
+    });
   }
 
   void signup() async {
@@ -143,23 +168,33 @@ class _MySignupPageState extends State<SignupPage> {
 
     FirebaseAuth firebaseAuth = FirebaseAuth.instance;
     final FirebaseFirestore firestore = FirebaseFirestore.instance;
-    final UserCredential userCredential =
-        await firebaseAuth.createUserWithEmailAndPassword(
-      email: email,
-      password: password,
-    );
 
-    // create user
-    AppUser user = AppUser(
-      uid: userCredential.user!.uid,
-      email: email,
-      name: name,
-    );
+    try {
+      final UserCredential userCredential =
+          await firebaseAuth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
 
-    // the newly created user is stored into the firestore database in users collection
-    await firestore.collection("users").doc(user.uid).set(user.toJson());
+      // create user
+      AppUser user = AppUser(
+        uid: userCredential.user!.uid,
+        email: email,
+        name: name,
+      );
 
-    showUserPage(user);
+      // the newly created user is stored into the firestore database in users collection
+      await firestore.collection("users").doc(user.uid).set(user.toJson());
+
+      showUserPage(user);
+    } on FirebaseAuthException catch (e) {
+      if (kDebugMode) {
+        print(e);
+        setState(() {
+          serverError = e.message!;
+        });
+      }
+    }
   }
 
   showUserPage(AppUser user) {
@@ -187,7 +222,7 @@ class _MySignupPageState extends State<SignupPage> {
               children: [
                 TextField(
                   onChanged: (text) {
-                    validateFieldValues('name', text);
+                    validateField('name', text);
                   },
                   controller: fieldsData['name']?.textEditingController,
                   decoration: InputDecoration(
@@ -206,7 +241,7 @@ class _MySignupPageState extends State<SignupPage> {
                 ),
                 TextField(
                   onChanged: (text) {
-                    validateFieldValues('email', text);
+                    validateField('email', text);
                   },
                   focusNode: fieldsData['email']?.focusNode,
                   controller: fieldsData['email']?.textEditingController,
@@ -227,10 +262,19 @@ class _MySignupPageState extends State<SignupPage> {
                 TextField(
                   onChanged: (text) {
                     tempPassword = text;
-                    validateFieldValues('password', text);
+                    validateField('password', text);
+                    // If confirmed password field changed at least one time
+                    if (fieldsData['confirmedPassword']!.isDirty) {
+                      validateField(
+                          'confirmedPassword',
+                          fieldsData['confirmedPassword']!
+                              .textEditingController
+                              .text);
+                    }
                   },
                   focusNode: fieldsData['password']?.focusNode,
                   controller: fieldsData['password']?.textEditingController,
+                  obscureText: true,
                   decoration: InputDecoration(
                       hintText: 'Enter your password',
                       labelText: "Password",
@@ -247,10 +291,11 @@ class _MySignupPageState extends State<SignupPage> {
                 ),
                 TextField(
                   onChanged: (text) {
-                    validateFieldValues('confirmedPassword', text);
+                    validateField('confirmedPassword', text);
                   },
                   controller:
                       fieldsData['confirmedPassword']?.textEditingController,
+                  obscureText: true,
                   decoration: InputDecoration(
                       hintText: 'Repeat your password',
                       labelText: "Confirm Password",
@@ -266,7 +311,7 @@ class _MySignupPageState extends State<SignupPage> {
                   height: 40,
                 ),
                 TextButton(
-                  onPressed: isAllFieldsIsValid() ? signup : null,
+                  onPressed: isAllFieldsAreValid() ? signup : null,
                   style: ButtonStyle(
                     foregroundColor: WidgetStateProperty.resolveWith<Color>(
                       (Set<WidgetState> states) {
@@ -279,6 +324,10 @@ class _MySignupPageState extends State<SignupPage> {
                     overlayColor: WidgetStateProperty.all(Colors.transparent),
                   ),
                   child: const Text("Submit"),
+                ),
+                Visibility(
+                  visible: serverError.isNotEmpty,
+                  child: Text(serverError),
                 ),
                 const SizedBox(
                   height: 40,
