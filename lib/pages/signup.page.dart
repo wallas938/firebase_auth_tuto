@@ -3,31 +3,12 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_auth_tuto/main.dart';
 import 'package:firebase_auth_tuto/pages/login.page.dart';
 import 'package:firebase_auth_tuto/pages/user.page.dart';
+import 'package:firebase_auth_tuto/shared/auth/constant/index.dart';
+import 'package:firebase_auth_tuto/shared/auth/model/form-logic.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
-enum FieldErrorState { initial, invalid, valid }
-
-class FieldData {
-  TextEditingController textEditingController;
-  FocusNode focusNode;
-  bool isFocused;
-  bool isDirty;
-  FieldErrorState hasError;
-  String? errorMessage;
-
-  FieldData(
-      {required this.textEditingController,
-      required this.focusNode,
-      required this.isFocused,
-      required this.isDirty,
-      required this.errorMessage,
-      required this.hasError});
-}
-
 class SignupPage extends StatefulWidget {
-  final String pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$';
-
   const SignupPage({super.key});
 
   @override
@@ -42,7 +23,7 @@ class _MySignupPageState extends State<SignupPage> {
   String serverError = '';
   String tempPassword = '';
   bool formState = false;
-  late RegExp regex = RegExp(widget.pattern);
+  late RegExp regex = RegExp(emailPattern);
 
   @override
   void initState() {
@@ -162,12 +143,11 @@ class _MySignupPageState extends State<SignupPage> {
   }
 
   void signup() async {
+    final FirebaseAuth firebaseAuth = FirebaseAuth.instance;
+    final FirebaseFirestore firestore = FirebaseFirestore.instance;
     final name = fieldsData['name']!.textEditingController.text;
     final email = fieldsData['email']!.textEditingController.text;
     final password = fieldsData['password']!.textEditingController.text;
-
-    FirebaseAuth firebaseAuth = FirebaseAuth.instance;
-    final FirebaseFirestore firestore = FirebaseFirestore.instance;
 
     try {
       final UserCredential userCredential =
