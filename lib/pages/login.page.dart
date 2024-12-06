@@ -130,11 +130,11 @@ class _MyLoginPageState extends State<MyLoginPage> {
           fieldsData['password']!.textEditingController.text;
       UserCredential userCredential = await firebaseAuth
           .signInWithEmailAndPassword(email: email, password: password);
+
       AppUser user =
-          AppUser.fromJson(userCredential.user as Map<String, dynamic>);
+          AppUser(uid: userCredential.user!.uid, name: '', email: email);
 
       showUserPage(user);
-
     } on FirebaseAuthException catch (e) {
       serverError = e.message!;
     }

@@ -150,6 +150,7 @@ class _MySignupPageState extends State<SignupPage> {
     final password = fieldsData['password']!.textEditingController.text;
 
     try {
+
       final UserCredential userCredential =
           await firebaseAuth.createUserWithEmailAndPassword(
         email: email,
